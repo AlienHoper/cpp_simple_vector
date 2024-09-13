@@ -21,14 +21,13 @@ public:
 
     ArrayPtr& operator=(const ArrayPtr&) = delete;
 
-    ArrayPtr(ArrayPtr&& other) noexcept : raw_ptr_(other.raw_ptr_) {
-        other.raw_ptr_ = nullptr;
-    }
+    ArrayPtr(ArrayPtr&& other) noexcept : raw_ptr_(std::exchange(other.raw_ptr_, nullptr)) { }
+
 
     ArrayPtr& operator=(ArrayPtr&& other) noexcept {
         if (this != &other) {
             delete[] raw_ptr_;
-            raw_ptr_ = other.raw_ptr_;
+            swap(raw_ptr_,other.raw_ptr_);
             other.raw_ptr_ = nullptr;
         }
         return *this;
@@ -67,3 +66,4 @@ public:
 private:
     Type* raw_ptr_ = nullptr;
 };
+

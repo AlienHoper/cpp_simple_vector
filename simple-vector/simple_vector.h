@@ -33,28 +33,21 @@ public:
     SimpleVector() noexcept : size_(0), capacity_(0), data_() {}
 
     explicit SimpleVector(size_t size)
-        : size_(size), capacity_(size), data_(size ? size : 0) {
-        if constexpr (std::is_copy_constructible_v<Type>) {
-            std::fill(data_.Get(), data_.Get() + size_, Type{});
-        }
-    }
+        : size_(size), capacity_(size), data_(size) {}
 
     SimpleVector(size_t size, const Type& value)
-        : size_(size), capacity_(size), data_(size ? size : 0) {
-        if constexpr (std::is_copy_constructible_v<Type>) {
-            std::fill(data_.Get(), data_.Get() + size_, value);
-        }
-    }
+        : size_(size), capacity_(size), data_(size) {}
 
     SimpleVector(std::initializer_list<Type> init)
         : size_(init.size()), capacity_(init.size()), data_(init.size()) {
         std::move(init.begin(), init.end(), data_.Get());
     }
 
-    SimpleVector(const SimpleVector& other) requires(std::is_copy_constructible_v<Type>)
+    SimpleVector(const SimpleVector& other)
         : size_(other.size_), capacity_(other.capacity_), data_(other.capacity_) {
         std::copy(other.begin(), other.end(), data_.Get());
     }
+
 
     SimpleVector& operator=(const SimpleVector& rhs) requires(std::is_copy_assignable_v<Type>) {
         if (this != &rhs) {
@@ -73,10 +66,8 @@ public:
     SimpleVector& operator=(SimpleVector&& rhs) noexcept {
         if (this != &rhs) {
             data_ = std::move(rhs.data_);
-            size_ = rhs.size_;
-            capacity_ = rhs.capacity_;
-            rhs.size_ = 0;
-            rhs.capacity_ = 0;
+            size_ = std::exchange(rhs.size_, 0);
+            capacity_ = std::exchange(rhs.capacity_, 0);
         }
         return *this;
     }
@@ -97,6 +88,19 @@ public:
         new (data_.Get() + size_) Type(std::move(item));
         ++size_;
     }
+    
+    void PushBack(const Type& item) {
+        if (size_ == capacity_) {
+            size_t new_capacity = capacity_ == 0 ? 1 : capacity_ * 2;
+            ArrayPtr<Type> new_data(new_capacity);
+            std::move(data_.Get(), data_.Get() + size_, new_data.Get());
+            data_.swap(new_data);
+            capacity_ = new_capacity;
+        }
+        new (data_.Get() + size_) Type(item);
+        ++size_;
+    }
+
 
     void PopBack() noexcept {
         assert(size_ > 0);
@@ -121,6 +125,27 @@ public:
         ++size_;
         return begin() + index;
     }
+    
+    Iterator Insert(ConstIterator pos, const Type& value) {
+        assert(pos >= begin() && pos <= end());
+        size_t index = pos - begin();
+        if (size_ == capacity_) {
+            size_t new_capacity = capacity_ == 0 ? 1 : capacity_ * 2;
+            ArrayPtr<Type> new_data(new_capacity);
+            std::move(data_.Get(), data_.Get() + index, new_data.Get());
+            new (new_data.Get() + index) Type(value);
+            std::move(data_.Get() + index, data_.Get() + size_, new_data.Get() + index + 1);
+            data_.swap(new_data);
+            capacity_ = new_capacity;
+        } else {
+            std::move_backward(begin() + index, end(), end() + 1);
+            new (data_.Get() + index) Type(value);
+        }
+        ++size_;
+        return begin() + index;
+    }
+
+
 
     Iterator Erase(ConstIterator pos) {
         assert(pos >= begin() && pos < end());
@@ -149,10 +174,12 @@ public:
     }
 
     Type& operator[](size_t index) noexcept {
+        assert(index < size_);
         return data_[index];
     }
 
     const Type& operator[](size_t index) const noexcept {
+        assert(index < size_);
         return data_[index];
     }
 
@@ -179,15 +206,8 @@ public:
             size_t new_capacity = std::max(new_size, capacity_ * 2);
             ArrayPtr<Type> new_data(new_capacity);
             std::move(data_.Get(), data_.Get() + size_, new_data.Get());
-            if constexpr (std::is_copy_constructible_v<Type>) {
-                std::fill(new_data.Get() + size_, new_data.Get() + new_size, Type{});
-            }
             data_.swap(new_data);
             capacity_ = new_capacity;
-        } else if (new_size > size_) {
-            if constexpr (std::is_copy_constructible_v<Type>) {
-                std::fill(data_.Get() + size_, data_.Get() + new_size, Type{});
-            }
         }
         size_ = new_size;
     }

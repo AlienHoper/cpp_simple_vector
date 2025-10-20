@@ -7,6 +7,7 @@
 #include <type_traits>
 #include "array_ptr.h"
 
+// For reader clarity; constructing a vector with reserved cpacity without adding elements 
 class ReserveProxyObj {
 public:
     explicit ReserveProxyObj(size_t capacity_to_reserve)
@@ -24,31 +25,42 @@ ReserveProxyObj Reserve(size_t capacity_to_reserve) {
     return ReserveProxyObj(capacity_to_reserve);
 }
 
+// SimpleVector: a minimal vector-like container.
+//If you must “reconstruct”, destroy first, then place new
+
 template <typename Type>
 class SimpleVector {
 public:
     using Iterator = Type*;
     using ConstIterator = const Type*;
 
+    //Constructors 
+    // Empty vector: no allocation
     SimpleVector() noexcept : size_(0), capacity_(0), data_() {}
 
+    // Construct of size N with default-constructed elements
     explicit SimpleVector(size_t size)
         : size_(size), capacity_(size), data_(size) {}
 
+    // Construct of size N with all elements == value
     SimpleVector(size_t size, const Type& value)
-        : size_(size), capacity_(size), data_(size) {}
+        : size_(size), capacity_(size), data_(size ? size : 0) {
+        std::fill(data_.Get(), data_.Get() + size_, value);
+    }
 
+    // Construct from initializer list
     SimpleVector(std::initializer_list<Type> init)
         : size_(init.size()), capacity_(init.size()), data_(init.size()) {
         std::move(init.begin(), init.end(), data_.Get());
     }
 
+    // Deep copy
     SimpleVector(const SimpleVector& other)
         : size_(other.size_), capacity_(other.capacity_), data_(other.capacity_) {
         std::copy(other.begin(), other.end(), data_.Get());
     }
 
-
+    //Copy-and-swap
     SimpleVector& operator=(const SimpleVector& rhs) requires(std::is_copy_assignable_v<Type>) {
         if (this != &rhs) {
             SimpleVector temp(rhs);
@@ -56,13 +68,13 @@ public:
         }
         return *this;
     }
-
+    // Move
     SimpleVector(SimpleVector&& other) noexcept
         : size_(other.size_), capacity_(other.capacity_), data_(std::move(other.data_)) {
         other.size_ = 0;
         other.capacity_ = 0;
     }
-
+    // Move assignment
     SimpleVector& operator=(SimpleVector&& rhs) noexcept {
         if (this != &rhs) {
             data_ = std::move(rhs.data_);
@@ -71,7 +83,7 @@ public:
         }
         return *this;
     }
-
+    // Reserve-only
     SimpleVector(const ReserveProxyObj& reserve_obj)
         : size_(0), capacity_(reserve_obj.GetCapacity()), data_(reserve_obj.GetCapacity()) {}
 
@@ -113,9 +125,9 @@ public:
         if (size_ == capacity_) {
             size_t new_capacity = capacity_ == 0 ? 1 : capacity_ * 2;
             ArrayPtr<Type> new_data(new_capacity);
-            std::move(data_.Get(), data_.Get() + index, new_data.Get());
+            std::move(data_.Get(), data_.Get() + index, new_data.Get()); // move old elements
             new (new_data.Get() + index) Type(std::move(value));
-            std::move(data_.Get() + index, data_.Get() + size_, new_data.Get() + index + 1);
+            std::move(data_.Get() + index, data_.Get() + size_, new_data.Get() + index + 1); // insert new element
             data_.swap(new_data);
             capacity_ = new_capacity;
         } else {

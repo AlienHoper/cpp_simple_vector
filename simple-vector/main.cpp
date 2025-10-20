@@ -7,6 +7,11 @@
 
 using namespace std;
 
+/// <summary>
+///  
+/// </summary>
+
+/// Forbids copying and allows moving
 class X {
 public:
     X()
@@ -16,7 +21,9 @@ public:
         : x_(num) {
     }
     X(const X& other) = delete;
+
     X& operator=(const X& other) = delete;
+
     X(X&& other) {
         x_ = exchange(other.x_, 0);
     }
@@ -37,6 +44,8 @@ SimpleVector<int> GenerateVector(size_t size) {
     iota(v.begin(), v.end(), 1);
     return v;
 }
+
+// pre-made tests
 
 void TestTemporaryObjConstructor() {
     const size_t size = 1000000;
@@ -122,15 +131,17 @@ void TestNoncopiableInsert() {
         v.PushBack(X(i));
     }
 
-    // в начало
+    // To the beginning
     v.Insert(v.begin(), X(size + 1));
     assert(v.GetSize() == size + 1);
     assert(v.begin()->GetX() == size + 1);
-    // в конец
+
+    // In the end
     v.Insert(v.end(), X(size + 2));
     assert(v.GetSize() == size + 2);
     assert((v.end() - 1)->GetX() == size + 2);
-    // в середину
+
+    // In the middle
     v.Insert(v.begin() + 3, X(size + 3));
     assert(v.GetSize() == size + 3);
     assert((v.begin() + 3)->GetX() == size + 3);

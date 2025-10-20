@@ -7,9 +7,6 @@
 
 using namespace std;
 
-/// <summary>
-///  
-/// </summary>
 
 /// Forbids copying and allows moving
 class X {
@@ -45,7 +42,7 @@ SimpleVector<int> GenerateVector(size_t size) {
     return v;
 }
 
-// pre-made tests
+// Pre-made Tests
 
 void TestTemporaryObjConstructor() {
     const size_t size = 1000000;

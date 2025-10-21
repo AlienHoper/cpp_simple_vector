@@ -17,7 +17,7 @@ Educational Simple Vector with move semantics, iteration, growth, and safe owner
 ├── simple_vector.h    # The vector-like container (template, header-only)
 └── main.cpp           # Minimal demo / tests
 ```
-## 🔧 Requirements
+## Requirements
 
 - C++20 (or newer) compiler 
 
